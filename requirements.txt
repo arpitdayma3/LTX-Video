@@ -101,3 +101,4 @@ wcwidth==0.2.13
 websockets==15.0.1
 yarl==1.20.0
 zipp==3.21.0
+q8_kernels
