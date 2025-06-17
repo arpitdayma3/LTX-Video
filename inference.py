@@ -6,6 +6,8 @@ from pathlib import Path
 from diffusers.utils import logging
 from typing import Optional, List, Union
 import yaml
+import io
+import requests
 
 import imageio
 import json
@@ -75,11 +77,16 @@ def load_image_to_tensor_with_resize_and_crop(
         just_crop: If True, only crop the image to the target size without resizing
     """
     if isinstance(image_input, str):
-        image = Image.open(image_input).convert("RGB")
+        if image_input.startswith('http://') or image_input.startswith('https://'):
+            response = requests.get(image_input)
+            response.raise_for_status()  # Raise an exception for bad status codes
+            image = Image.open(io.BytesIO(response.content)).convert("RGB")
+        else:
+            image = Image.open(image_input).convert("RGB")
     elif isinstance(image_input, Image.Image):
         image = image_input
     else:
-        raise ValueError("image_input must be either a file path or a PIL Image object")
+        raise ValueError("image_input must be either a file path, a URL, or a PIL Image object")
 
     input_width, input_height = image.size
     aspect_ratio_target = target_width / target_height
