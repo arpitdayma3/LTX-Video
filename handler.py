@@ -6,6 +6,7 @@ import runpod
 import requests
 import io
 from PIL import Image
+import q8_kernels # Added for FP8 support
 
 # Adjust imports based on actual functions needed from inference.py
 from inference import (
@@ -46,18 +47,32 @@ def _initialize_pipeline():
         models_dir = "MODEL_DIR" # Or any other preferred local cache directory
         Path(models_dir).mkdir(parents=True, exist_ok=True)
 
-        ltxv_model_name_or_path = config["checkpoint_path"]
+        # Use the specific FP8 model
+        ltxv_model_name_or_path = "ltxv-13b-0.9.7-distilled-fp8.safetensors"
+        # Update config to use this model path for consistency if other parts of config are used
+        config["checkpoint_path"] = ltxv_model_name_or_path
+
         if not os.path.isfile(ltxv_model_name_or_path):
-            from huggingface_hub import hf_hub_download # Local import
-            ltxv_model_path = hf_hub_download(
-                repo_id="Lightricks/LTX-Video",
-                filename=ltxv_model_name_or_path,
-                local_dir=models_dir,
-                repo_type="model",
-            )
+            # Check if it's in MODEL_DIR first (if downloaded manually or by another run)
+            local_model_path_check = Path(models_dir) / ltxv_model_name_or_path
+            if local_model_path_check.is_file():
+                 ltxv_model_path = str(local_model_path_check)
+            else:
+                from huggingface_hub import hf_hub_download # Local import
+                print(f"Downloading model {ltxv_model_name_or_path} from Hugging Face Hub...")
+                ltxv_model_path = hf_hub_download(
+                    repo_id="Lightricks/LTX-Video", # Assuming same repo_id
+                    filename=ltxv_model_name_or_path,
+                    local_dir=models_dir,
+                    repo_type="model",
+                )
+                print(f"Model downloaded to {ltxv_model_path}")
         else:
+            # This case implies ltxv_model_name_or_path was a full path already and exists
             ltxv_model_path = ltxv_model_name_or_path
-        config["checkpoint_path"] = ltxv_model_path # Update config with local path
+
+        # Ensure the config reflects the actual path being used, especially if it was downloaded
+        config["checkpoint_path"] = ltxv_model_path
 
         spatial_upscaler_model_name_or_path = config.get("spatial_upscaler_model_path")
         if spatial_upscaler_model_name_or_path and not os.path.isfile(spatial_upscaler_model_name_or_path):
