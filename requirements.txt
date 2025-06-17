@@ -108,3 +108,4 @@ matplotlib
 av
 opencv-python
 pytest
+q8_kernels
